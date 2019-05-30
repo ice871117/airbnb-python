@@ -43,3 +43,5 @@ venv2.7
 
 .DS_Store
 .env
+
+.idea
