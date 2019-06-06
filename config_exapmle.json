@@ -1,0 +1,13 @@
+{
+    "start_hour":2,
+    "start_minute":0,
+    "counting_days":30,
+    "room_limit":0,
+    "email_receiver":"414191673@qq.com",
+    "email_sender":"dataanalyzer@163.com",
+    "sender_passwd":"ff871117FF",
+    "query":[
+        "上海,徐汇区,中国",
+        "上海,奉贤区,中国"
+    ]
+}

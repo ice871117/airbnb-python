@@ -3,7 +3,13 @@ This Search service is for querying airbnb's room reservation information.
 Before start it, you should first config through the config method.
 The implementation of this service is airbnb's public api through api.
 """
-
+import time
+from airbnb.api import Api
+from Utils import *
+from Models import RoomInfo
+from StorageService import StorageService
+from LogHelper import Log
+from Report import MailReporter
 
 """
 Typical structure of a home json
@@ -147,37 +153,37 @@ Typical structure of a home json
 }
 """
 
-import datetime
-import time
-from airbnb.api import Api
-import json
-
-
 class Config:
-    def __init__(self, startHour, startMinute, cityList, reportEmail, roomLimit, localStoragePath="", logPath=""):
+    def __init__(self, startHour, startMinute, cityList, reportEmail, senderEmail, senderEmailPass, roomLimit, localStoragePath="", countingDays=30):
         """
         constructor of global config
         :param startHour: the hour to start the search service each day
         :param startMinute: the minute to start the search service, use with startHour
         :param cityList: a list of tuple, for querying room information, e.g. [("上海","中国"), ("北京","中国"), ("Lisbon","Portugal")]
         :param reportEmail: the email address to send report to
+        :param senderEmail: the email address for the report sender
+        :param senderEmailPass the password for sender email
         :param roomLimit: the max number of rooms returned
         :param localStoragePath: the direct where local storage file will be located in, use ~ if not provided
+        :param use how many days's data to analyze the ratio of reserved rooms
         """
         self.startHour = startHour
         self.startMinute = startMinute
         self.cityList = cityList
         self.reportEmail = reportEmail
+        self.senderEmail = senderEmail
+        self.senderEmailPasswd = senderEmailPass
         self.roomLimit = roomLimit
         self.localStoragePath = localStoragePath
-        self.logPath = logPath
+        self.countingDays = countingDays
 
 
 class SearchService:
 
+    TAG = "SearchService"
+
     def __init__(self, config):
         self._config = config
-        self.totalHomes = 0
         pass
 
     def start(self):
@@ -186,30 +192,50 @@ class SearchService:
                 now = datetime.datetime.now()
                 if now.hour == self._config.startHour and now.minute == self._config.startMinute:
                     self.doQuery()
+                    time.sleep(60 * 60)
                 else:
                     time.sleep(50)  # in second
 
     def doQuery(self):
+        print("===> querying on " + getDateStr())
         now = datetime.datetime.now()
         tomorrow = now + datetime.timedelta(days=1)
-        checkin_date = "{0}-{1}-{2}".format(now.year, now.month, now.day)
-        checkout_date = "{0}-{1}-{2}".format(tomorrow.year, tomorrow.month, tomorrow.day)
+        checkin_date = '{:%Y-%m-%d}'.format(now)
+        checkout_date = '{:%Y-%m-%d}'.format(tomorrow)
         api = Api(randomize=True)
-        for city in self._config.cityList:
-            query = "{0}, {1}, {2}".format(city[0], city[1], city[2])
-            hasNextPage = True
-            startOffset = 0
-            while hasNextPage:
-                homes = api.get_homes(query=query, checkin=checkin_date, checkout=checkout_date, offset=startOffset, items_per_grid=10)
-                pagination = self.retrieveHomeData(query, homes)
-                if not pagination:
-                    hasNextPage = False
+        storageService = StorageService(self._config.localStoragePath)
+        analyzeCollection = []
+        try:
+            for city in self._config.cityList:
+                query = getQueryStr(city)
+                hasNextPage = True
+                startOffset = 0
+                homeInfoCollection = []
+                while hasNextPage:
+                    homes = api.get_homes(query=query, checkin=checkin_date, checkout=checkout_date, offset=startOffset,
+                                          items_per_grid=10)
+                    pagination = self.retrieveHomeData(query, homes, homeInfoCollection)
+                    if not pagination:
+                        hasNextPage = False
+                    else:
+                        hasNextPage = pagination["has_next_page"]
+                        startOffset = pagination.get("items_offset")
+                if len(homeInfoCollection) > 0:
+                    storageService.saveOrUpdateRoomBatch(homeInfoCollection)
+                    analyze = self.performAnalyze(homeInfoCollection, query, storageService)
+                    analyzeCollection.append(analyze)
                 else:
-                    hasNextPage = pagination["has_next_page"]
-                    startOffset = pagination.get("items_offset")
-        print("total homes is " + str(self.totalHomes))
+                    Log.w(SearchService.TAG, "no data for query={0}".format(query))
+        except BaseException as e:
+            Log.w(SearchService.TAG, "doQuery() failed, ", e)
+        finally:
+            storageService.close()
+        if len(analyzeCollection) > 0:
+            self.reportForAnalyzeResult(analyzeCollection)
+        else:
+            Log.w(SearchService.TAG, "no analyze result generated")
 
-    def retrieveHomeData(self, query, originReturn):
+    def retrieveHomeData(self, query, originReturn, homeInfoCollection):
         print("analyzing " + query)
         explore_tabs = originReturn["explore_tabs"]
         pagination = None
@@ -225,23 +251,28 @@ class SearchService:
                 for item in sections:
                     if item and item["result_type"] == "listings":
                         real_homes = item["listings"]
-                        print("==> first home id " + str(real_homes[0]["listing"]["id"]))
-                        self.totalHomes += len(real_homes)
-                        # if not pagination["has_next_page"]:
-                        #     index = 0
-                        #     for jsonItem in real_homes:
-                        #         formatedHomeInfo = json.dumps(jsonItem, indent=4)
-                        #         print("+++" + str(index) + formatedHomeInfo)
-                        #         index += 1
+                        print(str(len(real_homes)) + " rooms for " + query)
+                        for roomItem in real_homes:
+                            roomInfo = RoomInfo.parseFromDict(roomItem, query)
+                            if roomInfo:
+                                homeInfoCollection.append(roomInfo)
+
         else:
             print("explore_tabs is empty")
         return pagination
 
+    def performAnalyze(self, homeInfoCollection, query, storageService):
+        count = storageService.countRoomsForRecentDays(query, self._config.countingDays)
+        todayAvailable = len(homeInfoCollection)
+        ratio = float(count - todayAvailable) / float(count) if count > 0 else 0
+        ratio = '{:0.2f}'.format(ratio * 100)
+        return "{0} - {1}%".format(query, ratio)
 
-if __name__ == "__main__":
-    cityList = [("上海", "徐汇区", "中国")]
-    # config = Config(22, 1, cityList, None, 100, "./rooms.db", "./logs/")
-    # service = SearchService(config)
-    # service.doQuery()
-    import os
-    os.system("pwd")
+    def reportForAnalyzeResult(self, analyzeCollection):
+        reporter = MailReporter(self._config.senderEmail, self._config.senderEmailPasswd)
+        title = "Airbnb分析日报"
+        content = ""
+        for item in analyzeCollection:
+            content += item
+            content += "\r\n"
+        reporter.send(self._config.reportEmail, title, content)

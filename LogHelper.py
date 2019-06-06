@@ -15,9 +15,9 @@ class Log:
 
     @staticmethod
     def config(logPath, echo=False, maxLogSize=1_000_000):
-        _echo = echo
+        Log._echo = echo
 
-        _logger = logging.getLogger("Rooms-log")
+        Log._logger = logging.getLogger("Rooms-log")
 
         log_file = logPath if logPath else Log._DEFAULT_LOG_PATH
         # set the log file to be truncated when reach maxLogSize
@@ -27,29 +27,41 @@ class Log:
                                       datefmt='%Y/%m/%d %H:%M:%S')
 
         fh.setFormatter(formatter)
-        _logger.addHandler(fh)
+        Log._logger.addHandler(fh)
 
     @staticmethod
-    def d(msg):
-        Log._logger.debug(msg)
+    def d(tag, msg, e=None):
+        logMsg = Log._getLogBody(tag, msg, e)
+        Log._logger.debug(logMsg)
         if Log._echo:
-            print("debug - " + msg)
+            print("debug - " + logMsg)
 
     @staticmethod
-    def i(msg):
-        Log._logger.info(msg)
+    def i(tag, msg, e=None):
+        logMsg = Log._getLogBody(tag, msg, e)
+        Log._logger.debug(logMsg)
+        Log._logger.info(logMsg)
         if Log._echo:
-            print("info - " + msg)
+            print("info - " + logMsg)
 
     @staticmethod
-    def w(msg):
-        Log._logger.warning(msg)
+    def w(tag, msg, e=None):
+        logMsg = Log._getLogBody(tag, msg, e)
+        Log._logger.debug(logMsg)
+        Log._logger.warning(logMsg)
         if Log._echo:
-            print("warning - " + msg)
+            print("warning - " + logMsg)
 
     @staticmethod
-    def e(msg):
-        Log._logger.error(msg)
+    def e(tag, msg, e=None):
+        logMsg = Log._getLogBody(tag, msg, e)
+        Log._logger.debug(logMsg)
+        Log._logger.error(logMsg)
         if Log._echo:
-            print("error - " + msg)
+            print("error - " + logMsg)
+
+
+    @staticmethod
+    def _getLogBody(tag, msg, e=None):
+        return "[{0}]:{1}".format(tag, msg) if not e else "[{0}]:{1} Exception: {2}".format(tag, msg, repr(e))
 
