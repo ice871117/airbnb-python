@@ -19,18 +19,23 @@ class RoomInfo:
         self.query = query
 
     @staticmethod
+    def getValue(inDict, key, default=None):
+        value = inDict.get(key)
+        return value if value else default
+
+    @staticmethod
     def parseFromDict(dictFromNet, query):
         ret = RoomInfo()
         try:
             listing = dictFromNet["listing"]
             ret.roomId = int(listing["id"])
-            ret.personCapacity = int(listing["person_capacity"])
-            ret.neighbourhood = listing.get("neighborhood")
+            ret.personCapacity = int(RoomInfo.getValue(listing, "person_capacity", 0))
+            ret.neighbourhood = RoomInfo.getValue(listing, "neighborhood", "")
             ret.city = RoomInfo.getCityFromQuery(query, listing.get("city"))
-            ret.beds = int(listing["beds"])
+            ret.beds = int(RoomInfo.getValue(listing, "beds", 0))
             ret.query = query
-            ret.pic = listing.get("picture_url")
-            pricingQuote = dictFromNet["pricing_quote"]
+            ret.pic = RoomInfo.getValue(listing, "picture_url", "")
+            pricingQuote = RoomInfo.getValue(dictFromNet, "pricing_quote")
             ret.price = RoomInfo.getPrice(pricingQuote)
         except BaseException as e:
             Log.w(RoomInfo.TAG, "parseFromDict() failed, ", e)
