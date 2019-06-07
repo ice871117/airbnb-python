@@ -250,15 +250,15 @@ def main():
             storagePath = value
         if key == '-d':
             operation = value
-    if not configPath:
-        print("config path not provided")
-        sys.exit(0)
     if operation == "start":
         daemon_start(pidFilePath)
     elif operation == "stop":
         daemon_stop(pidFilePath)
         sys.exit(0)
 
+    if not configPath:
+        print("config path not provided")
+        sys.exit(0)
     config = parseConfigFile(configPath)
     if not config:
         sys.exit(0)
