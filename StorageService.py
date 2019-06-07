@@ -80,17 +80,25 @@ class StorageService:
             self._conn.commit()
         return success
 
-    def countRoomsForRecentDays(self, query, days):
+    def countRoomsForRecentDays(self, query, city, days):
         """
         get the number of available individual rooms for recent days
         :param query: the query string
+        :param city: the city name specified in config.json, this will take effect only when query is None
         :param days: the number of days before now
         :return:
         """
         ret = 0
         cursor = self._conn.cursor()
         try:
-            cursor.execute("SELECT DISTINCT(room_id) FROM room_info WHERE update_time>? AND query_str=?", (getDeltaTimeStamp(datetime.datetime.now(), -days), query))
+            if query:
+                cursor.execute("SELECT DISTINCT(room_id) FROM room_info WHERE update_time>? AND query_str=?", (getDeltaTimeStamp(datetime.datetime.now(), -days), query))
+            elif city:
+                cursor.execute("SELECT DISTINCT(room_id) FROM room_info WHERE update_time>? AND city=?",
+                               (getDeltaTimeStamp(datetime.datetime.now(), -days), city))
+            else:
+                Log.w(StorageService._TAG, "query and city all empty!!")
+                return 0
             ret = len(cursor.fetchall())
         except BaseException as e:
             Log.w(StorageService._TAG, "countRoomsForRecentDays() failed", e)

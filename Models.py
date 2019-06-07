@@ -25,7 +25,7 @@ class RoomInfo:
             ret.roomId = int(listing["id"])
             ret.personCapacity = int(listing["person_capacity"])
             ret.neighbourhood = listing.get("neighborhood")
-            ret.city = listing["city"]
+            ret.city = RoomInfo.getCityFromQuery(query, listing.get("city"))
             ret.beds = int(listing["beds"])
             ret.query = query
             ret.pic = listing.get("picture_url")
@@ -45,6 +45,13 @@ class RoomInfo:
             pass
         return ret
 
+    @staticmethod
+    def getCityFromQuery(query, default):
+        splited = query.split(",")
+        if len(splited) > 0:
+            return splited[0]
+        else:
+            return default
 
     def toString(self):
         return "id:{0}, location:{1}, city:{2}, beds:{3}, neighbourhood:{4}, price:{5}, pic:{6}, query{7}".format(self.roomId, self.location, self.city, self.beds, self.neighbourhood, self.price, self.pic, self.query)

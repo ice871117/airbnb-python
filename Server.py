@@ -46,7 +46,7 @@ def parseConfigFile(path):
         "room_limit":0,
         "email_receiver":"414191673@qq.com",
         "email_sender":"dataanalyzer@163.com",
-        "sender_passwd":"ff871117FF",
+        "sender_passwd":"***",
         "query":[
             "上海,徐汇区,中国",
             "上海,虹口区,中国",
@@ -213,7 +213,7 @@ def write_pid_file(pid_file, pid):
 
 
 def main():
-    configPath = "config_exapmle.json"
+    configPath = None
     parentPath = os.environ.get('HOME')
     if not parentPath:
         print('can not fetch $HOME')

@@ -9,7 +9,10 @@ from Utils import *
 from Models import RoomInfo
 from StorageService import StorageService
 from LogHelper import Log
+import os
 from Report import MailReporter
+import xlwt
+import zipfile
 
 """
 Typical structure of a home json
@@ -153,8 +156,10 @@ Typical structure of a home json
 }
 """
 
+
 class Config:
-    def __init__(self, startHour, startMinute, cityList, reportEmail, senderEmail, senderEmailPass, roomLimit, localStoragePath="", countingDays=30):
+    def __init__(self, startHour, startMinute, cityList, reportEmail, senderEmail, senderEmailPass, roomLimit,
+                 localStoragePath="", countingDays=30):
         """
         constructor of global config
         :param startHour: the hour to start the search service each day
@@ -179,7 +184,6 @@ class Config:
 
 
 class SearchService:
-
     TAG = "SearchService"
 
     def __init__(self, config):
@@ -205,6 +209,7 @@ class SearchService:
         api = Api(randomize=True)
         storageService = StorageService(self._config.localStoragePath)
         analyzeCollection = []
+        forExcel = []
         try:
             for city in self._config.cityList:
                 query = getQueryStr(city)
@@ -222,8 +227,9 @@ class SearchService:
                         startOffset = pagination.get("items_offset")
                 if len(homeInfoCollection) > 0:
                     storageService.saveOrUpdateRoomBatch(homeInfoCollection)
-                    analyze = self.performAnalyze(homeInfoCollection, query, storageService)
+                    analyze, excelRet = self.performAnalyze(homeInfoCollection, query, storageService)
                     analyzeCollection.append(analyze)
+                    forExcel.append(excelRet)
                 else:
                     Log.w(SearchService.TAG, "no data for query={0}".format(query))
         except BaseException as e:
@@ -231,7 +237,7 @@ class SearchService:
         finally:
             storageService.close()
         if len(analyzeCollection) > 0:
-            self.reportForAnalyzeResult(analyzeCollection)
+            self.reportForAnalyzeResult(analyzeCollection, forExcel)
         else:
             Log.w(SearchService.TAG, "no analyze result generated")
 
@@ -262,17 +268,48 @@ class SearchService:
         return pagination
 
     def performAnalyze(self, homeInfoCollection, query, storageService):
-        count = storageService.countRoomsForRecentDays(query, self._config.countingDays)
-        todayAvailable = len(homeInfoCollection)
-        ratio = float(count - todayAvailable) / float(count) if count > 0 else 0
+        count = storageService.countRoomsForRecentDays(query, None, self._config.countingDays)
+        reserved = count - len(homeInfoCollection)
+        ratio = float(reserved) / float(count) if count > 0 else 0
         ratio = '{:0.2f}'.format(ratio * 100)
-        return "{0} - {1}%".format(query, ratio)
+        excelRet = list()
+        excelRet.append(query)
+        excelRet.append(count)
+        excelRet.append(reserved)
+        excelRet.append(ratio)
+        return "{0} - total:{1}, reserved:{2}, reservation ratio:{3}%".format(query, count, reserved, ratio), excelRet
 
-    def reportForAnalyzeResult(self, analyzeCollection):
+    def reportForAnalyzeResult(self, analyzeCollection, forExcel):
         reporter = MailReporter(self._config.senderEmail, self._config.senderEmailPasswd)
         title = "Airbnb分析日报"
         content = ""
+        excel = self.buildExcel(forExcel)
         for item in analyzeCollection:
             content += item
             content += "\r\n"
-        reporter.send(self._config.reportEmail, title, content)
+        receivers = list()
+        receivers.append(self._config.reportEmail)
+        reporter.send(receivers, title, content, excel)
+
+    def buildExcel(self, value):
+        tempXls = "temp.xls"
+        tempZip = "result.zip"
+        if os.path.exists(tempZip):
+            os.remove(tempZip)
+        if os.path.exists(tempXls):
+            os.remove(tempXls)
+        rows = len(value)  # 获取需要写入数据的行数
+        workbook = xlwt.Workbook()  # 新建一个工作簿
+        sheet = workbook.add_sheet("analyze data")  # 在工作簿中新建一个表格
+        # 填表头
+        sheet.write(0, 0, "查询地区")
+        sheet.write(0, 1, "总房间数")
+        sheet.write(0, 2, "今日已预订")
+        sheet.write(0, 3, "预订比例")
+        for i in range(0, rows):
+            for j in range(0, len(value[i])):
+                sheet.write(i + 1, j, value[i][j])  # 像表格中写入数据（对应的行和列）
+        workbook.save(tempXls)
+        with zipfile.ZipFile(tempZip, 'w') as myZip:
+            myZip.write(tempXls)
+        return tempZip

@@ -47,7 +47,7 @@ def testSaveRoomInfo():
     assertEqual(ret.pic, roomInfo.pic)
     assertEqual(ret.query, queryStr)
 
-    assertEqual(storage.countRoomsForRecentDays(queryStr, 30), 1)
+    assertEqual(storage.countRoomsForRecentDays(None, "上海", 30), 1)
 
     storage.close()
 
