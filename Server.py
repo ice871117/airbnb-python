@@ -14,7 +14,7 @@ import Utils
 import signal
 import io
 
-MAIN_LOG = "airbnb_fetcher"
+MAIN_TAG = "main"
 PID_FILE_NAME = "pid_file.txt"
 
 
@@ -93,7 +93,7 @@ def parseConfigFile(path):
         return Config(hour, minute, cities, email_receiver, email_sender, sender_passwd, room_limit,
                       countingDays=counting_days)
     except json.decoder.JSONDecodeError as e:
-        Log.w(MAIN_LOG, "parseConfigFile() fail, ", e)
+        Log.w(MAIN_TAG, "parseConfigFile() fail, ", e)
     return None
 
 def freopen(f, mode, stream):
@@ -126,13 +126,14 @@ def daemon_start(pid_file):
     ppid = os.getppid()
     pid = os.getpid()
     if write_pid_file(pid_file, pid) != 0:
+        Log.e(MAIN_TAG, "write_pid_file() failed, pid = " + str(pid))
         os.kill(ppid, signal.SIGINT)
         sys.exit(1)
 
     os.setsid()
     signal.signal(signal.SIG_IGN, signal.SIGHUP)
 
-    Log.d(MAIN_LOG, 'started')
+    Log.d(MAIN_TAG, 'started')
     os.kill(ppid, signal.SIGTERM)
 
     sys.stdin.close()
@@ -145,12 +146,12 @@ def daemon_stop(pid_file):
             buf = f.read()
             pid = Utils.to_str(buf)
             if not buf:
-                Log.e(MAIN_LOG, 'not running')
+                Log.e(MAIN_TAG, 'not running')
     except IOError as e:
-        Log.e(MAIN_LOG, "daemon_stop() fail", e)
+        Log.e(MAIN_TAG, "daemon_stop() fail", e)
         if e.errno == errno.ENOENT:
             # always exit 0 if we are sure daemon is not running
-            Log.e(MAIN_LOG, 'not running')
+            Log.e(MAIN_TAG, 'not running')
             return
         sys.exit(1)
     pid = int(pid)
@@ -159,13 +160,13 @@ def daemon_stop(pid_file):
             os.kill(pid, signal.SIGTERM)
         except OSError as e:
             if e.errno == errno.ESRCH:
-                Log.e(MAIN_LOG, 'not running')
+                Log.e(MAIN_TAG, 'not running')
                 # always exit 0 if we are sure daemon is not running
                 return
-            Log.e(MAIN_LOG, "daemon_stop() fail", e)
+            Log.e(MAIN_TAG, "daemon_stop() fail", e)
             sys.exit(1)
     else:
-        Log.e(MAIN_LOG, 'pid is not positive: ' + str(pid))
+        Log.e(MAIN_TAG, 'pid is not positive: ' + str(pid))
 
     # sleep for maximum 10s
     for i in range(0, 200):
@@ -177,9 +178,9 @@ def daemon_stop(pid_file):
                 break
         time.sleep(0.05)
     else:
-        Log.e(MAIN_LOG, 'timed out when stopping pid ' + str(pid))
+        Log.e(MAIN_TAG, 'timed out when stopping pid ' + str(pid))
         sys.exit(1)
-    Log.d(MAIN_LOG, 'stopped')
+    Log.d(MAIN_TAG, 'stopped')
     os.unlink(pid_file)
 
 def write_pid_file(pid_file, pid):
@@ -190,7 +191,7 @@ def write_pid_file(pid_file, pid):
         fd = os.open(pid_file, os.O_RDWR | os.O_CREAT,
                      stat.S_IRUSR | stat.S_IWUSR)
     except OSError as e:
-        Log.w(MAIN_LOG, "exception for write_pid_file()", e)
+        Log.w(MAIN_TAG, "exception for write_pid_file()", e)
         return -1
     flags = fcntl.fcntl(fd, fcntl.F_GETFD)
     assert flags != -1
@@ -204,9 +205,9 @@ def write_pid_file(pid_file, pid):
     except IOError:
         r = os.read(fd, 32)
         if r:
-            Log.e(MAIN_LOG, 'already started at pid %s' % Utils.to_str(r))
+            Log.e(MAIN_TAG, 'already started at pid %s' % Utils.to_str(r))
         else:
-            Log.e(MAIN_LOG, 'already started')
+            Log.e(MAIN_TAG, 'already started')
         os.close(fd)
         return -1
     os.ftruncate(fd, 0)
@@ -260,7 +261,7 @@ def main():
         sys.exit(0)
 
     if not configPath:
-        Log.e(MAIN_LOG, "config path not provided")
+        Log.e(MAIN_TAG, "config path not provided")
         sys.exit(0)
     config = parseConfigFile(configPath)
     if not config:
