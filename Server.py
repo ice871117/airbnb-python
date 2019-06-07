@@ -219,7 +219,7 @@ def main():
     configPath = None
     parentPath = os.environ.get('HOME')
     if not parentPath:
-        Log.w(MAIN_LOG, 'can not fetch $HOME')
+        print('can not fetch $HOME')
         parentPath = "."
     parentPath += "/airbnb"
     if not os.path.exists(parentPath):
@@ -250,6 +250,9 @@ def main():
             storagePath = value
         if key == '-d':
             operation = value
+
+    # 配置日志模块
+    Log.config(logPath, echo=True)
     if operation == "start":
         daemon_start(pidFilePath)
     elif operation == "stop":
@@ -263,8 +266,6 @@ def main():
     if not config:
         sys.exit(0)
     config.localStoragePath = storagePath
-    # 配置日志模块
-    Log.config(logPath, echo=True)
     service = SearchService(config)
     service.start()
 
