@@ -57,7 +57,7 @@ class MailReporter:
             smtpObj.sendmail(self.sender, receivers, message.as_string())
             # 退出
             smtpObj.quit()
-            print('Mail successfully send')
+            Log.i(MailReporter.TAG, 'Mail successfully sent to ' + receivers[0])
         except smtplib.SMTPException as e:
             Log.e(MailReporter.TAG, 'send() error', e)
 
@@ -80,7 +80,7 @@ class MailReporter:
             smtpObj.connect(self.mailHost, 25)
             smtpObj.login(self.sender, self.passwd)
             smtpObj.sendmail(self.sender, receivers, message.as_string())
-            print('Mail successfully send')
+            Log.i(MailReporter.TAG, 'Mail successfully sent to ' + receivers[0])
             smtpObj.quit()
         except smtplib.SMTPException as e:
             Log.e(MailReporter.TAG, 'send() error', e)

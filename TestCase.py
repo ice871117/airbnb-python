@@ -5,6 +5,10 @@ from StorageService import StorageService
 from Models import RoomInfo
 from Utils import *
 from LogHelper import Log
+import os
+from SearchService import SearchService
+import sys
+from Server import parseConfigFile
 
 def assertTrue(cond):
     if cond:
@@ -47,7 +51,7 @@ def testSaveRoomInfo():
     assertEqual(ret.pic, roomInfo.pic)
     assertEqual(ret.query, queryStr)
 
-    assertEqual(storage.countRoomsForRecentDays(None, "上海", 30), 1)
+    assertTrue(storage.countRoomsForRecentDays(None, "上海", 30) >= 1)
 
     storage.close()
 
@@ -57,8 +61,30 @@ def testSaveReservation():
     assertTrue(storage.isAvailable(123, getDateStr()))
     storage.close()
 
+def testServer():
+    configPath = "config_exapmle.json"
+    parentPath = os.environ.get('HOME')
+    if not parentPath:
+        print('can not fetch $HOME')
+        parentPath = "."
+    parentPath += "/airbnb"
+    if not os.path.exists(parentPath):
+        os.mkdir(parentPath, mode=0o755)
+
+    logPath = parentPath + "/all_logs.log"
+    storagePath = parentPath + "/rooms.db"
+    config = parseConfigFile(configPath)
+    if not config:
+        sys.exit(0)
+    config.localStoragePath = storagePath
+    # 配置日志模块
+    Log.config(logPath, echo=True)
+    service = SearchService(config)
+    service.doQuery()
+
 
 if __name__ == "__main__":
-    Log.config("/users/wiizhang/downloads/airbnb_python_logs.log")
-    testSaveRoomInfo()
-    testSaveReservation()
+    # Log.config("/users/wiizhang/downloads/airbnb_python_logs.log")
+    # testSaveRoomInfo()
+    # testSaveReservation()
+    testServer()
