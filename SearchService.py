@@ -14,6 +14,7 @@ import os
 from Report import MailReporter
 import xlwt
 import zipfile
+import traceback
 
 """
 Typical structure of a home json
@@ -234,6 +235,7 @@ class SearchService:
                 else:
                     Log.w(SearchService.TAG, "no data for query={0}".format(query))
         except BaseException as e:
+            traceback.print_exc()
             Log.w(SearchService.TAG, "doQuery() failed, ", e)
         finally:
             storageService.close()
