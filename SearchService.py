@@ -203,7 +203,7 @@ class SearchService:
                     time.sleep(50)  # in second
 
     def doQuery(self):
-        print("===> querying on " + getDateStr())
+        Log.d(SearchService.TAG, "===> querying on " + getDateStr())
         now = datetime.datetime.now()
         tomorrow = now + datetime.timedelta(days=1)
         checkin_date = '{:%Y-%m-%d}'.format(now)
@@ -220,7 +220,7 @@ class SearchService:
                 homeInfoCollection = []
                 while hasNextPage:
                     homes = api.get_homes(query=query, checkin=checkin_date, checkout=checkout_date, offset=startOffset,
-                                          items_per_grid=10)
+                                          items_per_grid=150)
                     pagination = self.retrieveHomeData(query, homes, homeInfoCollection)
                     if not pagination:
                         hasNextPage = False
@@ -245,29 +245,29 @@ class SearchService:
             Log.w(SearchService.TAG, "no analyze result generated")
 
     def retrieveHomeData(self, query, originReturn, homeInfoCollection):
-        print("analyzing " + query)
+        Log.d(SearchService.TAG, "analyzing " + query)
         explore_tabs = originReturn["explore_tabs"]
         pagination = None
         if len(explore_tabs) > 0:
             firstTab = explore_tabs[0]  # dict
             pagination = firstTab["pagination_metadata"]
-            if pagination:
-                print("has_next_page = " + str(pagination["has_next_page"]))
-                print("items_offset = " + str(pagination.get("items_offset")))
-                print("section_offset = " + str(pagination.get("section_offset")))
+            # if pagination:
+            #     print("has_next_page = " + str(pagination["has_next_page"]))
+            #     print("items_offset = " + str(pagination.get("items_offset")))
+            #     print("section_offset = " + str(pagination.get("section_offset")))
             sections = firstTab.get("sections")
             if sections:
                 for item in sections:
                     if item and item["result_type"] == "listings":
                         real_homes = item["listings"]
-                        print(str(len(real_homes)) + " rooms for " + query)
+                        Log.d(SearchService.TAG, str(len(real_homes)) + " rooms for " + query)
                         for roomItem in real_homes:
                             roomInfo = RoomInfo.parseFromDict(roomItem, query)
                             if roomInfo:
                                 homeInfoCollection.append(roomInfo)
 
         else:
-            print("explore_tabs is empty")
+            Log.w(SearchService.TAG, "explore_tabs is empty")
         return pagination
 
     def performAnalyze(self, homeInfoCollection, query, storageService):
