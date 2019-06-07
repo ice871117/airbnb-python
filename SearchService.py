@@ -282,7 +282,7 @@ class SearchService:
 
     def reportForAnalyzeResult(self, analyzeCollection, forExcel):
         reporter = MailReporter(self._config.senderEmail, self._config.senderEmailPasswd)
-        title = "Airbnb分析日报"
+        title = u"Airbnb分析日报"
         content = ""
         excel = self.buildExcel(forExcel)
         for item in analyzeCollection:
@@ -305,10 +305,10 @@ class SearchService:
         workbook = xlwt.Workbook()  # 新建一个工作簿
         sheet = workbook.add_sheet("analyze data")  # 在工作簿中新建一个表格
         # 填表头
-        sheet.write(0, 0, "查询地区")
-        sheet.write(0, 1, "总房间数")
-        sheet.write(0, 2, "今日已预订")
-        sheet.write(0, 3, "预订比例")
+        sheet.write(0, 0, u"查询地区")
+        sheet.write(0, 1, u"总房间数")
+        sheet.write(0, 2, u"今日已预订")
+        sheet.write(0, 3, u"预订比例")
         for i in range(0, rows):
             for j in range(0, len(value[i])):
                 sheet.write(i + 1, j, value[i][j])  # 像表格中写入数据（对应的行和列）

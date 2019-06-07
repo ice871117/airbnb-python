@@ -64,6 +64,6 @@ class Log:
 
     @staticmethod
     def _getLogBody(tag, msg, e=None):
-        body = u"[{0}]:{1}".format(tag, msg) if not e else u"[{0}]:{1} Exception: {2}".format(tag, msg, repr(e))
+        body = u"[{0}]:{1}".format(tag, msg) if not e else u"[{0}]:{1} Exception: {2}".format(tag, msg, str(e))
         return body
 
