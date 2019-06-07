@@ -132,7 +132,7 @@ def daemon_start(pid_file):
     os.setsid()
     signal.signal(signal.SIG_IGN, signal.SIGHUP)
 
-    print('started')
+    Log.d(MAIN_LOG, 'started')
     os.kill(ppid, signal.SIGTERM)
 
     sys.stdin.close()
@@ -179,7 +179,7 @@ def daemon_stop(pid_file):
     else:
         Log.e(MAIN_LOG, 'timed out when stopping pid ' + str(pid))
         sys.exit(1)
-    print('stopped')
+    Log.d(MAIN_LOG, 'stopped')
     os.unlink(pid_file)
 
 def write_pid_file(pid_file, pid):
@@ -219,7 +219,7 @@ def main():
     configPath = None
     parentPath = os.environ.get('HOME')
     if not parentPath:
-        print('can not fetch $HOME')
+        Log.w(MAIN_LOG, 'can not fetch $HOME')
         parentPath = "."
     parentPath += "/airbnb"
     if not os.path.exists(parentPath):
@@ -257,7 +257,7 @@ def main():
         sys.exit(0)
 
     if not configPath:
-        print("config path not provided")
+        Log.e(MAIN_LOG, "config path not provided")
         sys.exit(0)
     config = parseConfigFile(configPath)
     if not config:
