@@ -12,6 +12,7 @@ import json
 import time
 import Utils
 import signal
+import io
 
 MAIN_LOG = "airbnb_fetcher"
 PID_FILE_NAME = "pid_file.txt"
@@ -214,6 +215,7 @@ def write_pid_file(pid_file, pid):
 
 
 def main():
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
     configPath = None
     parentPath = os.environ.get('HOME')
     if not parentPath:

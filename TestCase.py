@@ -10,6 +10,8 @@ import os
 from SearchService import SearchService
 import sys
 from Server import parseConfigFile
+import io
+
 
 def assertTrue(cond):
     if cond:
@@ -88,4 +90,5 @@ if __name__ == "__main__":
     # Log.config("/users/wiizhang/downloads/airbnb_python_logs.log")
     # testSaveRoomInfo()
     # testSaveReservation()
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
     testServer()
