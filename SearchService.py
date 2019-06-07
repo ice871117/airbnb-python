@@ -203,7 +203,7 @@ class SearchService:
                         Log.e(SearchService.TAG, "doQuery() failed, ", e)
                     time.sleep(60 * 60)
                 else:
-                    time.sleep(50)  # in second
+                    time.sleep(10)  # in second
 
     def doQuery(self):
         Log.d(SearchService.TAG, "===> querying on " + getDateStr())
