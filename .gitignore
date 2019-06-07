@@ -45,3 +45,7 @@ venv2.7
 .env
 
 .idea
+
+temp
+temp/
+temp/*

@@ -292,8 +292,10 @@ class SearchService:
         reporter.send(receivers, title, content, excel)
 
     def buildExcel(self, value):
-        tempXls = "temp.xls"
-        tempZip = "result.zip"
+        tempXls = "temp/temp.xls"
+        tempZip = "temp/result.zip"
+        if not os.path.exists("temp"):
+            os.mkdir("temp")
         if os.path.exists(tempZip):
             os.remove(tempZip)
         if os.path.exists(tempXls):
