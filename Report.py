@@ -50,6 +50,7 @@ class MailReporter:
         message['To'] = receivers[0]
         try:
             smtpObj = smtplib.SMTP()
+            smtpObj.starttls()
             # 连接到服务器
             smtpObj.connect(self.mailHost, 25)
             # 登录到服务器
@@ -79,6 +80,7 @@ class MailReporter:
         try:
             smtpObj = smtplib.SMTP()
             smtpObj.connect(self.mailHost, 25)
+            smtpObj.starttls()
             smtpObj.login(self.sender, self.passwd)
             smtpObj.sendmail(self.sender, receivers, message.as_string())
             Log.i(MailReporter.TAG, 'Mail successfully sent to ' + receivers[0])
