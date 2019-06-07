@@ -197,7 +197,10 @@ class SearchService:
             while True:
                 now = datetime.datetime.now()
                 if now.hour == self._config.startHour and now.minute == self._config.startMinute:
-                    self.doQuery()
+                    try:
+                        self.doQuery()
+                    except BaseException as e:
+                        Log.e(SearchService.TAG, "doQuery() failed, ", e)
                     time.sleep(60 * 60)
                 else:
                     time.sleep(50)  # in second
