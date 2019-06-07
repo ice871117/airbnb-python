@@ -73,7 +73,7 @@ def parseConfigFile(path):
     :return:
     '''
     try:
-        f = open(path, "r")
+        f = open(path, "r", encoding='utf-8')
         jsonStr = f.read()
         configDict = json.loads(jsonStr.replace("\\n", ""))
         hour = configDict.get("start_hour")
