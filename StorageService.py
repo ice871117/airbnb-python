@@ -1,3 +1,4 @@
+# coding=utf-8
 """
 This Storage service helps persistent room information given by SearchService.py
 Employ a sqlite3 to implement the detail for now.

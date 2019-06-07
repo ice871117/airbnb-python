@@ -1,3 +1,4 @@
+# coding=utf-8
 """
 This file contains all the models used by search and storage service
 """

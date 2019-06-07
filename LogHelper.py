@@ -1,3 +1,4 @@
+# coding=utf-8
 """
 Save the logs to file
 """
@@ -63,5 +64,6 @@ class Log:
 
     @staticmethod
     def _getLogBody(tag, msg, e=None):
-        return "[{0}]:{1}".format(tag, msg) if not e else "[{0}]:{1} Exception: {2}".format(tag, msg, repr(e))
+        body = u"[{0}]:{1}".format(tag, msg) if not e else u"[{0}]:{1} Exception: {2}".format(tag, msg, repr(e))
+        return body
 

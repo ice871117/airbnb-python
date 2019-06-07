@@ -1,3 +1,4 @@
+# coding=utf-8
 """
 This Search service is for querying airbnb's room reservation information.
 Before start it, you should first config through the config method.

@@ -1,3 +1,4 @@
+# coding=utf-8
 """
 The portal of this whole project
 """
