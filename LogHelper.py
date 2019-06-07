@@ -14,7 +14,7 @@ class Log:
     _logger = None
 
     @staticmethod
-    def config(logPath, echo=False, maxLogSize=1_000_000):
+    def config(logPath, echo=False, maxLogSize=1000000):
         Log._echo = echo
 
         Log._logger = logging.getLogger("Rooms-log")
