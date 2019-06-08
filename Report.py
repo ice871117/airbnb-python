@@ -13,16 +13,12 @@ class MailReporter:
 
     TAG = "MailReporter"
 
-    @staticmethod
-    def getSMTPAddress(sender):
-        index = sender.find("@")
-        if index > 0:
-            return "smtp.{0}".format(sender[index + 1:])
-
-    def __init__(self, sender, passwd):
-        self.mailHost = MailReporter.getSMTPAddress(sender)
+    def __init__(self, sender, passwd, smtpHost, smtpPort, sendType):
+        self.mailHost = smtpHost
+        self.mailPort = smtpPort
         self.sender = sender
         self.passwd = passwd
+        self.sendType = sendType
 
     def send(self, receivers, title, content, attachment=None):
         """
@@ -49,10 +45,12 @@ class MailReporter:
         # 接受方信息
         message['To'] = receivers[0]
         try:
-            smtpObj = smtplib.SMTP()
-            smtpObj.starttls()
+            smtpObj = smtplib.SMTP_SSL() if self.sendType == "ssl" else smtplib.SMTP()
             # 连接到服务器
-            smtpObj.connect(self.mailHost, 25)
+            smtpObj.connect(self.mailHost, self.mailPort)
+            smtpObj.ehlo()
+            if self.sendType == "tls":
+                smtpObj.starttls()
             # 登录到服务器
             smtpObj.login(self.sender, self.passwd)
             # 发送
@@ -78,9 +76,11 @@ class MailReporter:
 
         # 登录并发送
         try:
-            smtpObj = smtplib.SMTP()
-            smtpObj.connect(self.mailHost, 25)
-            smtpObj.starttls()
+            smtpObj = smtplib.SMTP_SSL() if self.sendType == "ssl" else smtplib.SMTP()
+            smtpObj.connect(self.mailHost, self.mailPort)
+            smtpObj.ehlo()
+            if self.sendType == "tls":
+                smtpObj.starttls()
             smtpObj.login(self.sender, self.passwd)
             smtpObj.sendmail(self.sender, receivers, message.as_string())
             Log.i(MailReporter.TAG, 'Mail successfully sent to ' + receivers[0])

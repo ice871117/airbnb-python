@@ -4,7 +4,10 @@
     "counting_days":30,
     "room_limit":0,
     "email_receiver":"414191673@qq.com",
-    "email_sender":"dataanalyzer@163.com",
+    "smtp_host":"smtp.exmail.qq.com",
+    "smtp_port":465,
+    "send_type":"ssl",
+    "email_sender":"zhangchenbonan@bossisross.cn",
     "sender_passwd":"ff871117FF",
     "query":[
         "上海,浦东新区,中国",

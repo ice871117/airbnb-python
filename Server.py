@@ -46,6 +46,8 @@ def parseConfigFile(path):
         "start_minute":0,
         "counting_days":30,
         "room_limit":0,
+        "smtp_host":"smtp.exmail.qq.com",
+        "smtp_port":465,
         "email_receiver":"414191673@qq.com",
         "email_sender":"dataanalyzer@163.com",
         "sender_passwd":"***",
@@ -86,12 +88,15 @@ def parseConfigFile(path):
         email_sender = configDict.get("email_sender")
         sender_passwd = configDict.get("sender_passwd")
         query = configDict.get("query")
+        smtp_host = configDict.get("smtp_host")
+        smtp_port = configDict.get("smtp_port")
+        send_type = configDict.get("send_type")
         cities = []
         for item in query:
             parts = item.split(",")
             cities.append((parts[0], parts[1], parts[2]))
         return Config(hour, minute, cities, email_receiver, email_sender, sender_passwd, room_limit,
-                      countingDays=counting_days)
+                      countingDays=counting_days, smtpHost=smtp_host, smtpPort=smtp_port, sendType=send_type)
     except json.decoder.JSONDecodeError as e:
         Log.w(MAIN_TAG, "parseConfigFile() fail, ", e)
     return None

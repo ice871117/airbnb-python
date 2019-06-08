@@ -161,7 +161,7 @@ Typical structure of a home json
 
 class Config:
     def __init__(self, startHour, startMinute, cityList, reportEmail, senderEmail, senderEmailPass, roomLimit,
-                 localStoragePath="", countingDays=30):
+                 localStoragePath="", countingDays=30, smtpHost=None, smtpPort=25, sendType=None):
         """
         constructor of global config
         :param startHour: the hour to start the search service each day
@@ -183,6 +183,9 @@ class Config:
         self.roomLimit = roomLimit
         self.localStoragePath = localStoragePath
         self.countingDays = countingDays
+        self.smtpHost = smtpHost
+        self.smtpPort = smtpPort
+        self.sendType = sendType
 
 
 class SearchService:
@@ -286,7 +289,7 @@ class SearchService:
         return "{0} - total:{1}, reserved:{2}, reservation ratio:{3}%".format(query, count, reserved, ratio), excelRet
 
     def reportForAnalyzeResult(self, analyzeCollection, forExcel):
-        reporter = MailReporter(self._config.senderEmail, self._config.senderEmailPasswd)
+        reporter = MailReporter(self._config.senderEmail, self._config.senderEmailPasswd, self._config.smtpHost, self._config.smtpPort, self._config.sendType)
         title = u"Airbnb分析日报"
         content = ""
         excel = self.buildExcel(forExcel)
