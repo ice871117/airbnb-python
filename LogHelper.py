@@ -19,6 +19,7 @@ class Log:
         Log._echo = echo
 
         Log._logger = logging.getLogger("Rooms-log")
+        Log._logger.setLevel(logging.DEBUG)
 
         log_file = logPath if logPath else Log._DEFAULT_LOG_PATH
         # set the log file to be truncated when reach maxLogSize
@@ -40,7 +41,6 @@ class Log:
     @staticmethod
     def i(tag, msg, e=None):
         logMsg = Log._getLogBody(tag, msg, e)
-        Log._logger.debug(logMsg)
         Log._logger.info(logMsg)
         if Log._echo:
             print("info - " + logMsg)
@@ -48,7 +48,6 @@ class Log:
     @staticmethod
     def w(tag, msg, e=None):
         logMsg = Log._getLogBody(tag, msg, e)
-        Log._logger.debug(logMsg)
         Log._logger.warning(logMsg)
         if Log._echo:
             print("warning - " + logMsg)
@@ -56,7 +55,6 @@ class Log:
     @staticmethod
     def e(tag, msg, e=None):
         logMsg = Log._getLogBody(tag, msg, e)
-        Log._logger.debug(logMsg)
         Log._logger.error(logMsg)
         if Log._echo:
             print("error - " + logMsg)
