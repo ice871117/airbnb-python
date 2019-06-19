@@ -243,8 +243,7 @@ class SearchService:
                     Log.w(SearchService.TAG, "no data for query={0}".format(query))
                 time.sleep(10) # take your time to do it
         except BaseException as e:
-            traceback.print_exc()
-            Log.w(SearchService.TAG, "doQuery() failed, ", e)
+            Log.w(SearchService.TAG, "doQuery() failed, ", str(e) + "\r\nexception detail:" + traceback.format_exc())
         finally:
             storageService.close()
         if len(analyzeCollection) > 0:
