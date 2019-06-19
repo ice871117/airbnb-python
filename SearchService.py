@@ -226,13 +226,14 @@ class SearchService:
                 homeInfoCollection = []
                 while hasNextPage:
                     homes = api.get_homes(query=query, checkin=checkin_date, checkout=checkout_date, offset=startOffset,
-                                          items_per_grid=150)
+                                          items_per_grid=100)
                     pagination = self.retrieveHomeData(query, homes, homeInfoCollection)
                     if not pagination:
                         hasNextPage = False
                     else:
                         hasNextPage = pagination["has_next_page"]
                         startOffset = pagination.get("items_offset")
+                    time.sleep(2) # do not query too fast
                 if len(homeInfoCollection) > 0:
                     storageService.saveOrUpdateRoomBatch(homeInfoCollection)
                     analyze, excelRet = self.performAnalyze(homeInfoCollection, query, storageService)
@@ -240,6 +241,7 @@ class SearchService:
                     forExcel.append(excelRet)
                 else:
                     Log.w(SearchService.TAG, "no data for query={0}".format(query))
+                time.sleep(10) # take your time to do it
         except BaseException as e:
             traceback.print_exc()
             Log.w(SearchService.TAG, "doQuery() failed, ", e)

@@ -93,8 +93,7 @@ def parseConfigFile(path):
         send_type = configDict.get("send_type")
         cities = []
         for item in query:
-            parts = item.split(",")
-            cities.append((parts[0], parts[1], parts[2]))
+            cities.append(item.split(","))
         return Config(hour, minute, cities, email_receiver, email_sender, sender_passwd, room_limit,
                       countingDays=counting_days, smtpHost=smtp_host, smtpPort=smtp_port, sendType=send_type)
     except json.decoder.JSONDecodeError as e:

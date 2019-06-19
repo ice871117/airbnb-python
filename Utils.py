@@ -5,7 +5,13 @@ import datetime
 
 
 def getQueryStr(cityTuple):
-    return "{0}, {1}, {2}".format(cityTuple[0], cityTuple[1], cityTuple[2])
+    ret = ""
+    length = len(cityTuple)
+    for index, item in enumerate(cityTuple):
+        ret += str(item)
+        if index != length - 1:
+            ret += ", "
+    return ret
 
 
 def getDateStr(date=None):
