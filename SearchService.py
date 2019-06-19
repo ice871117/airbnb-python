@@ -281,6 +281,8 @@ class SearchService:
     def performAnalyze(self, homeInfoCollection, query, storageService):
         count = storageService.countRoomsForRecentDays(query, None, self._config.countingDays)
         reserved = count - len(homeInfoCollection)
+        if reserved < 0:
+            reserved = 0
         ratio = float(reserved) / float(count) if count > 0 else 0
         ratio = '{:0.2f}'.format(ratio * 100)
         excelRet = list()
