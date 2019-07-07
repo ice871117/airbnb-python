@@ -83,7 +83,7 @@ def testServer():
     # 配置日志模块
     Log.config(logPath, echo=True)
     service = SearchService(config)
-    service.doQuery()
+    service.start()
 
 
 if __name__ == "__main__":

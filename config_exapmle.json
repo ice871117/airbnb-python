@@ -1,6 +1,6 @@
 {
-    "start_hour":2,
-    "start_minute":0,
+    "start_hour":22,
+    "start_minute":8,
     "counting_days":30,
     "room_limit":0,
     "email_receiver":"414191673@qq.com",
@@ -10,7 +10,10 @@
     "email_sender":"zhangchenbonan@bossisross.cn",
     "sender_passwd":"ff871117FF",
     "query":[
-        "上海,中国",
-        "深圳,中国"
+        "上海, 浦东新区, 中国",
+        "上海, 徐汇区, 中国",
+        "上海, 虹口区, 中国",
+        "深圳, 中国",
+        "北京, 中国"
     ]
 }

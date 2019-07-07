@@ -166,7 +166,8 @@ class Config:
         constructor of global config
         :param startHour: the hour to start the search service each day
         :param startMinute: the minute to start the search service, use with startHour
-        :param cityList: a list of tuple, for querying room information, e.g. [("上海","中国"), ("北京","中国"), ("Lisbon","Portugal")]
+        :param cityList: a dict of tuple, for querying room information, e.g. {"上海":[("上海", "徐汇区","中国"), ("上海", "浦东新区","中国")],
+        "北京":[("北京", "朝阳区", "中国"), ("北京", "海淀区", "中国")]}
         :param reportEmail: the email address to send report to
         :param senderEmail: the email address for the report sender
         :param senderEmailPass the password for sender email
@@ -193,6 +194,8 @@ class SearchService:
 
     def __init__(self, config):
         self._config = config
+        self.analyzeCollection = []
+        self.forExcel = []
         pass
 
     def start(self):
@@ -200,56 +203,58 @@ class SearchService:
             while True:
                 now = datetime.datetime.now()
                 if now.hour == self._config.startHour and now.minute == self._config.startMinute:
+                    dates = self.prepareDate()
+                    self.analyzeCollection.clear()
+                    self.forExcel.clear()
                     try:
-                        self.doQuery()
+                        for item in dates:
+                            self.doQuery(item[0], item[1], item[2])
                     except BaseException as e:
                         Log.e(SearchService.TAG, "doQuery() failed, ", e)
+                    if len(self.analyzeCollection) > 0:
+                        self.reportForAnalyzeResult(self.analyzeCollection, self.forExcel)
+                    else:
+                        Log.w(SearchService.TAG, "no analyze result generated")
                     time.sleep(60 * 60)
                 else:
                     time.sleep(10)  # in second
 
-    def doQuery(self):
+    def doQuery(self, checkin_date, checkout_date, time_title):
         Log.d(SearchService.TAG, "===> querying on " + getDateStr())
-        now = datetime.datetime.now()
-        tomorrow = now + datetime.timedelta(days=1)
-        checkin_date = '{:%Y-%m-%d}'.format(now)
-        checkout_date = '{:%Y-%m-%d}'.format(tomorrow)
         api = Api(randomize=True)
         storageService = StorageService(self._config.localStoragePath)
-        analyzeCollection = []
-        forExcel = []
         try:
-            for city in self._config.cityList:
-                query = getQueryStr(city)
-                hasNextPage = True
-                startOffset = 0
-                homeInfoCollection = []
-                while hasNextPage:
-                    homes = api.get_homes(query=query, checkin=checkin_date, checkout=checkout_date, offset=startOffset,
-                                          items_per_grid=100)
-                    pagination = self.retrieveHomeData(query, homes, homeInfoCollection)
-                    if not pagination:
-                        hasNextPage = False
-                    else:
-                        hasNextPage = pagination["has_next_page"]
-                        startOffset = pagination.get("items_offset")
-                    time.sleep(2) # do not query too fast
+            for (cityName, cityList) in self._config.cityList.items():
+                homeInfoCollection = dict()
+                for city in cityList:
+                    for adults in [1, 2, 3, 4]:
+                        query = getQueryStr(city)
+                        hasNextPage = True
+                        startOffset = 0
+                        while hasNextPage:
+                            homes = api.get_homes(query=query, checkin=checkin_date, checkout=checkout_date,
+                                                  offset=startOffset,
+                                                  items_per_grid=100, adults=adults)
+                            pagination = self.retrieveHomeData(query, homes, homeInfoCollection)
+                            if not pagination:
+                                hasNextPage = False
+                            else:
+                                hasNextPage = pagination["has_next_page"]
+                                startOffset = pagination.get("items_offset")
+                            time.sleep(2)  # do not query too fast
                 if len(homeInfoCollection) > 0:
-                    storageService.saveOrUpdateRoomBatch(homeInfoCollection)
-                    analyze, excelRet = self.performAnalyze(homeInfoCollection, query, storageService)
-                    analyzeCollection.append(analyze)
-                    forExcel.append(excelRet)
+                    roomInfos = [x for (_, x) in homeInfoCollection.items()]
+                    storageService.saveOrUpdateRoomBatch(roomInfos)
+                    analyze, excelRet = self.performAnalyze(roomInfos, cityName, storageService, time_title)
+                    self.analyzeCollection.append(analyze)
+                    self.forExcel.append(excelRet)
                 else:
-                    Log.w(SearchService.TAG, "no data for query={0}".format(query))
-                time.sleep(10) # take your time to do it
+                    Log.w(SearchService.TAG, "no data for query={0}".format(cityName))
+                time.sleep(10)  # take your time to do it
         except BaseException as e:
             Log.w(SearchService.TAG, "doQuery() failed, ", str(e) + "\r\nexception detail:" + traceback.format_exc())
         finally:
             storageService.close()
-        if len(analyzeCollection) > 0:
-            self.reportForAnalyzeResult(analyzeCollection, forExcel)
-        else:
-            Log.w(SearchService.TAG, "no analyze result generated")
 
     def retrieveHomeData(self, query, originReturn, homeInfoCollection):
         Log.d(SearchService.TAG, "analyzing " + query)
@@ -271,28 +276,39 @@ class SearchService:
                         for roomItem in real_homes:
                             roomInfo = RoomInfo.parseFromDict(roomItem, query)
                             if roomInfo:
-                                homeInfoCollection.append(roomInfo)
+                                homeInfoCollection[roomInfo.roomId] = roomInfo
 
         else:
             Log.w(SearchService.TAG, "explore_tabs is empty")
         return pagination
 
-    def performAnalyze(self, homeInfoCollection, query, storageService):
-        count = storageService.countRoomsForRecentDays(query, None, self._config.countingDays)
-        reserved = count - len(homeInfoCollection)
+    def performAnalyze(self, roomInfos, city, storageService, time_title):
+        count = storageService.countRoomsForRecentDays(None, city, self._config.countingDays)
+        reserved = count - len(roomInfos)
+        price = list()
+        for room in roomInfos:
+            if room.price > 0:
+                price.append(room.price)
+        total = 0
+        for itemPrice in price:
+            total += itemPrice
+        avg = total / len(price) if len(price) > 0 else 0
         if reserved < 0:
             reserved = 0
         ratio = float(reserved) / float(count) if count > 0 else 0
         ratio = '{:0.2f}'.format(ratio * 100)
         excelRet = list()
-        excelRet.append(query)
+        excelRet.append(city)
         excelRet.append(count)
         excelRet.append(reserved)
         excelRet.append(ratio)
-        return "{0} - total:{1}, reserved:{2}, reservation ratio:{3}%".format(query, count, reserved, ratio), excelRet
+        excelRet.append(avg)
+        excelRet.append(time_title)
+        return "{0} - total:{1}, reserved:{2}, reservation ratio:{3}, {4}, {5}%".format(city, count, reserved, ratio, avg, time_title), excelRet
 
     def reportForAnalyzeResult(self, analyzeCollection, forExcel):
-        reporter = MailReporter(self._config.senderEmail, self._config.senderEmailPasswd, self._config.smtpHost, self._config.smtpPort, self._config.sendType)
+        reporter = MailReporter(self._config.senderEmail, self._config.senderEmailPasswd, self._config.smtpHost,
+                                self._config.smtpPort, self._config.sendType)
         title = u"Airbnb分析日报"
         content = ""
         excel = self.buildExcel(forExcel)
@@ -318,8 +334,10 @@ class SearchService:
         # 填表头
         sheet.write(0, 0, u"查询地区")
         sheet.write(0, 1, u"总房间数")
-        sheet.write(0, 2, u"今日已预订")
+        sheet.write(0, 2, u"该日已预订")
         sheet.write(0, 3, u"预订比例")
+        sheet.write(0, 4, u"平均价格")
+        sheet.write(0, 5, u"入住日期")
         for i in range(0, rows):
             for j in range(0, len(value[i])):
                 sheet.write(i + 1, j, value[i][j])  # 像表格中写入数据（对应的行和列）
@@ -327,3 +345,17 @@ class SearchService:
         with zipfile.ZipFile(tempZip, 'w') as myZip:
             myZip.write(tempXls)
         return tempZip
+
+    def prepareDate(self):
+        ret = list()
+        now = datetime.datetime.now()
+        query_list = [now + datetime.timedelta(weeks=x) for x in [1, 4, 12]]
+        time_list = ['{:%Y-%m-%d}'.format(x) for x in query_list]
+        for i in range(0, len(query_list)):
+            start_date = query_list[i]
+            time_title = time_list[i]
+            leave_date = start_date + datetime.timedelta(days=1)
+            checkin_date = '{:%Y-%m-%d}'.format(start_date)
+            checkout_date = '{:%Y-%m-%d}'.format(leave_date)
+            ret.append((checkin_date, checkout_date, time_title))
+        return ret

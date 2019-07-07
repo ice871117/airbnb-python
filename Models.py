@@ -55,7 +55,7 @@ class RoomInfo:
     def getCityFromQuery(query, default):
         splited = query.split(",")
         if len(splited) > 0:
-            return splited[0]
+            return splited[0].strip()
         else:
             return default
 

@@ -331,7 +331,7 @@ class Api(object):
     # Listing search
 
     @randomizable
-    def get_homes(self, query=None, gps_lat=None, gps_lng=None, checkin=None, checkout=None, offset=0, items_per_grid=8):
+    def get_homes(self, query=None, gps_lat=None, gps_lng=None, checkin=None, checkout=None, offset=0, items_per_grid=8, beds=0, adults=0 ):
         """
         Search listings with
             * Query (e.g. query="Lisbon, Portugal") or
@@ -346,7 +346,6 @@ class Api(object):
             'version': '1.4.8',
             'section_offset': '0',
             'items_offset': str(offset),
-            'adults': '0',
             'screen_size': 'small',
             'source': 'explore_tabs',
             'items_per_grid': str(items_per_grid),
@@ -359,6 +358,9 @@ class Api(object):
 
         if not query and not (gps_lat and gps_lng):
             raise MissingParameterError("Missing query or gps coordinates")
+
+        if adults > 0:
+            params['adults'] = adults
 
         if query:
             params['query'] = query
