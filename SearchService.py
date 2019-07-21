@@ -221,27 +221,31 @@ class SearchService:
 
     def doQuery(self, checkin_date, checkout_date, time_title):
         Log.d(SearchService.TAG, "===> querying on " + getDateStr())
-        api = Api(randomize=True)
         storageService = StorageService(self._config.localStoragePath)
         try:
             for (cityName, cityList) in self._config.cityList.items():
                 homeInfoCollection = dict()
                 for city in cityList:
                     for adults in [1, 2, 3, 4]:
+                        api = Api(randomize=True)
                         query = getQueryStr(city)
                         hasNextPage = True
                         startOffset = 0
-                        while hasNextPage:
-                            homes = api.get_homes(query=query, checkin=checkin_date, checkout=checkout_date,
-                                                  offset=startOffset,
-                                                  items_per_grid=100, adults=adults)
-                            pagination = self.retrieveHomeData(query, homes, homeInfoCollection)
-                            if not pagination:
-                                hasNextPage = False
-                            else:
-                                hasNextPage = pagination["has_next_page"]
-                                startOffset = pagination.get("items_offset")
-                            time.sleep(2)  # do not query too fast
+                        try:
+                            while hasNextPage:
+                                homes = api.get_homes(query=query, checkin=checkin_date, checkout=checkout_date,
+                                                      offset=startOffset,
+                                                      items_per_grid=100, adults=adults)
+                                pagination = self.retrieveHomeData(query, homes, homeInfoCollection)
+                                if not pagination:
+                                    hasNextPage = False
+                                else:
+                                    hasNextPage = pagination["has_next_page"]
+                                    startOffset = pagination.get("items_offset")
+                                time.sleep(10)  # do not query too fast
+                        except BaseException as e:
+                            Log.w(SearchService.TAG, "get_homes() failed, ",
+                                  str(e) + "\r\nexception detail:" + traceback.format_exc())
                 if len(homeInfoCollection) > 0:
                     roomInfos = [x for (_, x) in homeInfoCollection.items()]
                     storageService.saveOrUpdateRoomBatch(roomInfos)
@@ -304,7 +308,7 @@ class SearchService:
         excelRet.append(ratio)
         excelRet.append(avg)
         excelRet.append(time_title)
-        return "{0} - total:{1}, reserved:{2}, reservation ratio:{3}, {4}, {5}%".format(city, count, reserved, ratio, avg, time_title), excelRet
+        return "{0} - total:{1}, reserved:{2}, reservation ratio:{3}%, {4}, {5}".format(city, count, reserved, ratio, avg, time_title), excelRet
 
     def reportForAnalyzeResult(self, analyzeCollection, forExcel):
         reporter = MailReporter(self._config.senderEmail, self._config.senderEmailPasswd, self._config.smtpHost,
