@@ -226,7 +226,7 @@ class SearchService:
             for (cityName, cityList) in self._config.cityList.items():
                 homeInfoCollection = dict()
                 for city in cityList:
-                    for adults in [1, 2, 3, 4]:
+                    for adults in [1, 2, 3]:
                         api = Api(randomize=True)
                         query = getQueryStr(city)
                         hasNextPage = True

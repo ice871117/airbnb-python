@@ -264,7 +264,7 @@ def main():
             operation = value
 
     # 配置日志模块
-    Log.config(logPath, echo=True)
+    Log.config(logPath, echo=False)
     if operation == "start":
         daemon_start(pidFilePath)
     elif operation == "stop":
