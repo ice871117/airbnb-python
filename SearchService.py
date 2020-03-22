@@ -196,9 +196,12 @@ class SearchService:
         self._config = config
         self.analyzeCollection = []
         self.forExcel = []
+        self._queryIntervalInSec = 10
+        self._queryIntervalForFailInSec = 30
         pass
 
     def start(self):
+        print("airbnb service start")
         while True:
             while True:
                 now = datetime.datetime.now()
@@ -215,46 +218,71 @@ class SearchService:
                         self.reportForAnalyzeResult(self.analyzeCollection, self.forExcel)
                     else:
                         Log.w(SearchService.TAG, "no analyze result generated")
-                    time.sleep(60 * 60)
+                    time.sleep(70)
                 else:
                     time.sleep(10)  # in second
 
-    def doQuery(self, checkin_date, checkout_date, time_title):
+    def tryGetHomeInfo(self, checkin_date, checkout_date, homeInfoCollection, adults, city):
+        """
+        the kernel logic for getting home information through cgi
+        :param checkin_date:
+        :param checkout_date:
+        :param homeInfoCollection:
+        :param adults:
+        :param city:
+        :return:
+        """
+        api = Api(randomize=True)
+        query = getQueryStr(city)
+        hasNextPage = True
+        startOffset = 0
+        try:
+            while hasNextPage:
+                homes = api.get_homes(query=query, checkin=checkin_date, checkout=checkout_date,
+                                      offset=startOffset,
+                                      items_per_grid=100, adults=adults)
+                pagination = self.retrieveHomeData(query, homes, homeInfoCollection)
+                if not pagination:
+                    hasNextPage = False
+                else:
+                    print("paging for next...")
+                    hasNextPage = pagination["has_next_page"]
+                    startOffset = pagination.get("items_offset")
+                time.sleep(self._queryIntervalInSec)  # do not query too fast
+        except BaseException as e:
+            Log.w(SearchService.TAG, "get_homes() failed, ",
+                  str(e) + "\r\nexception detail:" + traceback.format_exc())
+
+    def doQuery(self, checkin_date, checkout_dates, time_title):
+        """
+        the entry for build and execute a home api query
+        :param checkin_date: the date when u are going to check in.
+        :param checkout_dates: multiple checkout dates for enumerating the home info as completable as possible
+        :param time_title:
+        :return:
+        """
         Log.d(SearchService.TAG, "===> querying on " + getDateStr())
         storageService = StorageService(self._config.localStoragePath)
         try:
             for (cityName, cityList) in self._config.cityList.items():
-                homeInfoCollection = dict()
-                for city in cityList:
-                    for adults in [1, 2, 3]:
-                        api = Api(randomize=True)
-                        query = getQueryStr(city)
-                        hasNextPage = True
-                        startOffset = 0
-                        try:
-                            while hasNextPage:
-                                homes = api.get_homes(query=query, checkin=checkin_date, checkout=checkout_date,
-                                                      offset=startOffset,
-                                                      items_per_grid=100, adults=adults)
-                                pagination = self.retrieveHomeData(query, homes, homeInfoCollection)
-                                if not pagination:
-                                    hasNextPage = False
-                                else:
-                                    hasNextPage = pagination["has_next_page"]
-                                    startOffset = pagination.get("items_offset")
-                                time.sleep(10)  # do not query too fast
-                        except BaseException as e:
-                            Log.w(SearchService.TAG, "get_homes() failed, ",
-                                  str(e) + "\r\nexception detail:" + traceback.format_exc())
-                if len(homeInfoCollection) > 0:
-                    roomInfos = [x for (_, x) in homeInfoCollection.items()]
-                    storageService.saveOrUpdateRoomBatch(roomInfos)
-                    analyze, excelRet = self.performAnalyze(roomInfos, cityName, storageService, time_title)
-                    self.analyzeCollection.append(analyze)
-                    self.forExcel.append(excelRet)
-                else:
-                    Log.w(SearchService.TAG, "no data for query={0}".format(cityName))
-                time.sleep(10)  # take your time to do it
+                retry_time = 0
+                while retry_time < 3:
+                    homeInfoCollection = dict()
+                    for city in cityList:
+                        for checkout_date in checkout_dates:
+                            for adults in [1]:
+                                self.tryGetHomeInfo(checkin_date, checkout_date, homeInfoCollection, adults, city)
+                    if len(homeInfoCollection) > 0:
+                        roomInfos = [x for (_, x) in homeInfoCollection.items()]
+                        storageService.saveOrUpdateRoomBatch(roomInfos)
+                        analyze, excelRet = self.performAnalyze(roomInfos, cityName, storageService, time_title)
+                        self.analyzeCollection.append(analyze)
+                        self.forExcel.append(excelRet)
+                        break
+                    else:
+                        retry_time += 1
+                        Log.w(SearchService.TAG, "no data for query={0}, will retry for {1}th time".format(cityName, retry_time))
+                        time.sleep(self._queryIntervalForFailInSec)  # take your time to do it
         except BaseException as e:
             Log.w(SearchService.TAG, "doQuery() failed, ", str(e) + "\r\nexception detail:" + traceback.format_exc())
         finally:
@@ -296,7 +324,7 @@ class SearchService:
         total = 0
         for itemPrice in price:
             total += itemPrice
-        avg = total / len(price) if len(price) > 0 else 0
+        avg = int(total / len(price) + 0.5) if len(price) > 0 else 0
         if reserved < 0:
             reserved = 0
         ratio = float(reserved) / float(count) if count > 0 else 0
@@ -310,17 +338,23 @@ class SearchService:
         excelRet.append(time_title)
         return "{0} - total:{1}, reserved:{2}, reservation ratio:{3}%, {4}, {5}".format(city, count, reserved, ratio, avg, time_title), excelRet
 
+    @staticmethod
+    def takeFirst(elem):
+        return elem[0]
+
     def reportForAnalyzeResult(self, analyzeCollection, forExcel):
         reporter = MailReporter(self._config.senderEmail, self._config.senderEmailPasswd, self._config.smtpHost,
                                 self._config.smtpPort, self._config.sendType)
         title = u"Airbnb分析日报"
         content = ""
+        forExcel.sort(key=SearchService.takeFirst)
         excel = self.buildExcel(forExcel)
+        analyzeCollection.sort()
         for item in analyzeCollection:
             content += item
             content += "\r\n"
         receivers = list()
-        receivers.append(self._config.reportEmail)
+        receivers.extend(self._config.reportEmail)
         reporter.send(receivers, title, content, excel)
 
     def buildExcel(self, value):
@@ -358,8 +392,9 @@ class SearchService:
         for i in range(0, len(query_list)):
             start_date = query_list[i]
             time_title = time_list[i]
-            leave_date = start_date + datetime.timedelta(days=1)
+            leave_dates = [start_date + datetime.timedelta(days=x) for x in [1]]
             checkin_date = '{:%Y-%m-%d}'.format(start_date)
-            checkout_date = '{:%Y-%m-%d}'.format(leave_date)
-            ret.append((checkin_date, checkout_date, time_title))
+            # 2020.03.22 一次尝试多种入住时间（1天，2天，3天)，因为有些房源只有在1天以上入住时间下才能搜到
+            checkout_dats = ['{:%Y-%m-%d}'.format(leave_date) for leave_date in leave_dates]
+            ret.append((checkin_date, checkout_dats, time_title))
         return ret

@@ -65,7 +65,7 @@ def testSaveReservation():
     storage.close()
 
 def testServer():
-    configPath = "config_exapmle.json"
+    configPath = "config_example.json"
     parentPath = os.environ.get('HOME')
     if not parentPath:
         print('can not fetch $HOME')
@@ -90,5 +90,5 @@ if __name__ == "__main__":
     # Log.config("/users/wiizhang/downloads/airbnb_python_logs.log")
     # testSaveRoomInfo()
     # testSaveReservation()
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    # sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
     testServer()
