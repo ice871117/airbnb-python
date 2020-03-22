@@ -270,7 +270,7 @@ class SearchService:
                     homeInfoCollection = dict()
                     for city in cityList:
                         for checkout_date in checkout_dates:
-                            for adults in [1]:
+                            for adults in [1, 2]:
                                 self.tryGetHomeInfo(checkin_date, checkout_date, homeInfoCollection, adults, city)
                     if len(homeInfoCollection) > 0:
                         roomInfos = [x for (_, x) in homeInfoCollection.items()]
@@ -392,7 +392,7 @@ class SearchService:
         for i in range(0, len(query_list)):
             start_date = query_list[i]
             time_title = time_list[i]
-            leave_dates = [start_date + datetime.timedelta(days=x) for x in [1]]
+            leave_dates = [start_date + datetime.timedelta(days=x) for x in [1, 2, 3]]
             checkin_date = '{:%Y-%m-%d}'.format(start_date)
             # 2020.03.22 一次尝试多种入住时间（1天，2天，3天)，因为有些房源只有在1天以上入住时间下才能搜到
             checkout_dats = ['{:%Y-%m-%d}'.format(leave_date) for leave_date in leave_dates]
